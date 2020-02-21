@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: cadf9d4cc45a4e8281d03533072d037f1029e13ef3dde5868e6a2b865ff7a9bc
+-- hash: f8d22bb659d7e22a4af38a3f945020619eba1eaa59b7c71fd7116c55043782dc
 
 name:           CursoRio2020
 version:        0.1.0.0
@@ -25,12 +25,12 @@ source-repository head
 
 library
   exposed-modules:
+      Alternative
       Applicative
-      Clase2
-      Fold
+      Cola
       Functors
+      Generics
       Heap
-      Lib
       Monoid
   other-modules:
       Paths_CursoRio2020

@@ -71,7 +71,7 @@ listar (Q xs ys) = xs ++ reverse ys
 -- Para mantener la invariante hacemos
 -- un constructor inteligente
 mkQ :: [a] -> [a] -> Queue a
-mkQ [] ys = Q (reverse ys) []
+mkQ [] –ys = Q (reverse ys) []
 mkQ xs ys = Q xs ys
 
 
@@ -100,3 +100,6 @@ rotar 0 q = q
 rotar n q = if esVacia q then q
                          else rotar (n-1)
                            (poner (primero q) (sacar q))
+
+
+                           

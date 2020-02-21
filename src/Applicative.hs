@@ -279,6 +279,10 @@ Applicative y así obtener zipWith de aridad arbitraria.
     pure :: a -> ZipList a
     pure a = ZipList (repeat a)
 
+
+    -- Dado solo un valor crea una lista infinita para que cuando se use para mapear con otra lista se utilice
+      ese elemento con todos los valores de la lista y esta sea mas larga que todas las demas listas
+
     (<*>) :: ZipList (a -> b) -> ZipList a -> ZipList b
     ZipList fs <*> ZipList xs = ZipList (zipWith ($) fs xs)
 
@@ -370,10 +374,10 @@ cero = St (\s -> (0,()))
 sucesor :: State Int ()
 sucesor = St (\s -> (s+1,()))
 
-ej1 :: State Int String
-ej1 = cero *> sucesor *> pure "dos" <* sucesor
+ej1A :: State Int String
+ej1A = cero *> sucesor *> pure "dos" <* sucesor
 
-ej2 = sucesor *> ej1
+ej2A = sucesor *> ej1A
 
 
 
@@ -409,7 +413,11 @@ instance (Applicative f, Applicative g) => Applicative (f :*: g) where
 
 instance (Applicative f, Applicative g) => Applicative (f :.: g) where
   pure x = FunComp (pure (pure x))
-  FunComp fgh <*> FunComp fgx = FunComp $ (<*>) <$> fgh <*> fgx
+
+  -- <*> :: (f :.: g) (a -> b) -> (f :.: g) a -> (f :.: g) (b)
+  FunComp fgab <*> FunComp fgx = FunComp $ (fmap (<*>) fgab) <*> fgx
+  -- h :: a -> b
+  -- Version infija: FunComp fgab <*> FunComp fgx = FunComp $ (<*>) <$> fgab <*> fgx
 
 
 

@@ -107,6 +107,7 @@ class Alternative f => AppParser f where
   -}
 
   ---- operaciones derivadas
+  ---- Buscar en libreria data.char
 item            :: AppParser parser => parser Char
 item             = sat (const True)
 
@@ -116,6 +117,7 @@ char c           = sat (c ==)
 string          :: AppParser parser => String -> parser String
 string ""        = pure ""
 string (c:cs)    = (:) <$> char c <*> string cs
+-- string (c:cs)    = foldr (fmap (:) . char) (pure "")
 
 sepby           :: AppParser parser => parser a -> parser b -> parser [a]
 p `sepby` sep    = (p `sepby1` sep) <|> pure []
@@ -133,8 +135,22 @@ ws = many (sat isSpace) *> pure ()
 token :: AppParser parser => parser a -> parser a
 token p = ws *> p <* ws
 
+{-
+
+Ejemplo
+
+2-3-4-5-6-6 ** 2-3-4-5-6-6     **      2-3-4-5-6-6
+
+pure sum <*> sepby (sepby nat (char "-")) (token (string "**")) :: parser [Int]
+sum <$> ...
+
+parser Int
+
+-}
+
 symbol   :: AppParser parser => String -> parser String
 symbol xs = token (string xs)
+
 
 -------------------------------
 -- Una instancia de AppParser
@@ -206,6 +222,11 @@ una cadena que empieza con una minúscula y sigue con
 cualquier caracter alfanumérico
 -}
 
+idsParser :: AppParser p => p String
+idsParser = (:) <$> (sat isUpper) <*> some (sat isAlphaNum)
+
+ejIds1 = parse idsParser "aHolaaa"
+ejIds2 = parse idsParser "aHolaaa"
 
 {- Ejercicio
   Chequear que una cadena de paréntesis está bien balanceada con un parser
@@ -219,6 +240,19 @@ cualquier caracter alfanumérico
   > parse parentesis  "(()()()"
   Nothing
 -}
+
+parentesisParser :: AppParser p => p ()
+parentesisParser = parentesisParser' *> eof
+
+parentesisParser' :: AppParser p => p ()
+parentesisParser' = many parentesisParser'' *> pure ()
+
+parentesisParser'' :: AppParser p => p ()
+parentesisParser'' = (char '(') *> parentesisParser' <* (char ')')
+
+
+ejPar1 = parse parentesisParser "(()())"
+ejPar2 = parse parentesisParser "(())())"
 
 {- Ejercicio: Evaluador de expresiones aritméticas
 
@@ -244,6 +278,18 @@ Just 26
   Recomendamos definir un parser para cada no terminal.
 
 -}
+
+expr :: AppParser p => p Int
+expr = ((+) <$> term <* (token (char '+')) <*> expr) <|> term
+-- expr = (pure (+) <*> term <* (token (char '+')) <*> expr) <|> term
+
+term :: AppParser p => p Int
+term = ((*) <$> factor <* (token (char '*')) <*> term) <|> factor
+-- term = (pure (*) <*> factor <* (token (char '*')) <*> term) <|> factor
+
+factor :: AppParser p => p Int
+factor = (token (char '(')) *> expr <* (token (char ')')) <|> nat
+
 {- Ejercicio**
 
 Extender el ejercicio anterior para que maneje resta y división.

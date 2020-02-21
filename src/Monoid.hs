@@ -96,22 +96,33 @@ ejAny3 = mcat $ map Any [False,True,True]
 
 ejAny4 = monoidfree Any [False,True,True]
 
-
-
-
-
 --------------------------------
+
 newtype All = All {getAll :: Bool}
-     deriving Show
+  deriving Show
 
 instance Monoid All where
   mempty = All True
   All False <> _ = All False
   All True  <> x = x
 
+--------------------------------
 
+newtype Sum = Sum {getSum :: Int}
+  deriving Show
 
+instance Monoid Sum where
+  mempty = Sum 0
+  (Sum x) <> (Sum y) = Sum (x+y)
 
+--------------------------------
+
+newtype Prod = Prod {getProd :: Int}
+  deriving Show
+
+instance Monoid Prod where
+  mempty = Prod 1
+  (Prod x) <> (Prod y) = Prod (x*y)
 
 ----------------------------------
 -- Instancias con Maybe
@@ -124,19 +135,25 @@ newtype First a = First (Maybe a)
 instance Monoid (First a) where
   mempty = First Nothing
   First (Just a) <> _ = First (Just a)
-  First Nothing  <> x = x
+  (First Nothing) <> x = x
 
 {- Ejercicio
   Definir un tipo de datos llamado Last que sea isomorfo a Maybe y dar una
   instancia de monoide que devuelva siempre el último valor
 -}
 
+newtype Last a = Last (Maybe a) deriving Show
+
+instance Monoid (Last a) where
+  mempty = Last Nothing
+  (Last _) <> (Last (Just a)) = Last (Just a)
+  (Last x) <> (Last Nothing) = Last x
+
 ----------------------------------
 -- Monoide Dual
 ----------------------------------
 {- Dado un monoide podemos
  construir el monoide dual, que será diferente, siempre y cuando
-la operación binaria no sea conmutativa.
 -}
 
 newtype Dual a = Dual a
@@ -144,18 +161,22 @@ newtype Dual a = Dual a
 
 instance Monoid m => Monoid (Dual m) where
   mempty = Dual mempty
-  Dual x <> Dual y = Dual (y <> x)
+  (Dual x) <> (Dual y) = Dual (y <> x)
 
 {-
 Mediante esta construcción podemos ver, por ejemplo, que la relación
 entre listas y RevList, y la de First y Last, es exactamente la misma.
-
 -}
+
 ------------------------------------
 {- Monoide de endofunciones -}
 {- Ejercicio: Definir el monoide de endofunciones -}
+
 newtype Endo a = Endo (a -> a)
 
+instance Monoid (Endo a) where
+  mempty = Endo (\x -> x)
+  (Endo f) <> (Endo g) = Endo (f.g)
 
 ------------------------------------
 {-

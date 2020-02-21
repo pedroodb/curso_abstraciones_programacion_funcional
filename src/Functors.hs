@@ -164,7 +164,8 @@ La clase Functor
     Es responsabilidad del programador de las instancias chequearlo.
 
 
-
+  *** Comentario propio: Un Functor es una estructura que recibe un tipo como parametro (a) y que cuenta
+  con una funcion (fmap) que te permite acceder y operar con los elementos manteniendo la estructura
 
 
  Extensión DeriveFunctor
@@ -201,9 +202,6 @@ La funcion fmap como operador infijo
 
 
 
-
-
-
 -- ----------------------------------------------------
 -- -- EJERCICIOS de Funtores
 -- ----------------------------------------------------
@@ -214,12 +212,31 @@ La funcion fmap como operador infijo
 data Pair a = Pair a a
          deriving Show
 
+instance Functor Pair where
+  fmap f (Pair x y) = Pair (f x) (f y)
+
 data Algunos b a = Nada b | Uno a | Dos a a | Tres a a a
          deriving Show
+
+instance Functor (Algunos b) where
+  fmap f (Nada x) = Nada x
+  fmap f (Uno x) = Uno (f x)
+  fmap f (Dos x y) = Dos (f x) (f y)
+  fmap f (Tres x y z) = Tres (f x) (f y) (f z)
 
   -- -- Los funtores son más generales que simples contenedores de datos
 
 newtype C r a = C ((a -> r) -> r)
+
+instance Functor (C r) where
+  fmap f (C g) = C (\h -> g (h . f))
+  -- fmap ab (C arr) = \br -> arr (br . ab)
+
+  -- fmap :: (a -> b) -> ((a -> r) -> r) -> ((b -> r) -> r)
+  -- fmap :: (a -> b) -> (a -> r) -> r -> (b -> r) -> r
+  -- f :: a -> b
+  -- g :: (a -> r) -> r
+  -- h :: b -> r
 
   -- -- ¿Por qué la siguiente instancia (que está bien tipada)
   -- -- no define un funtor?

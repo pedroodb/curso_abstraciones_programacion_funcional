@@ -8,6 +8,8 @@
 module Generics where
 
 import Functors
+import Monoid
+import Prelude hiding ((<>),mempty,Monoid)
 
 
 --------------------------------------------------------------
@@ -187,8 +189,6 @@ instance Generic Pair where
   fromRep (FunProd (Id x) (Id y)) = Pair x y
 
 
-
-
 {-
 EJERCICIO
   Dar la instancia de
@@ -197,34 +197,22 @@ EJERCICIO
 
 -}
 
+instance Generic Maybe where
+  type Rep Maybe = (K ()) :+: Id
+
+  toRep Nothing = Inl (K ())
+  toRep (Just x) = Inr (Id x)
+  fromRep (Inl (K ())) = Nothing
+  fromRep (Inr (Id x)) = (Just x)
 
 
-
-
-
-
-
-
-
-
-
-
-
-  {- Mediante esta representación podemos definir
-    funciones genéricas. Por ejemplo, si el funtor es un contenedor
-    de números, podemos definir una función que los sume:
-  -}
+{- Mediante esta representación podemos definir
+  funciones genéricas. Por ejemplo, si el funtor es un contenedor
+  de números, podemos definir una función que los sume:
+-}
 
 class GSum f where
   gsum :: Num a => f a -> a
-
-
-
-
-
-
-
-
 
 
 
@@ -258,9 +246,34 @@ sum = gsum . toRep
 Generalizar la suma a cualquier monoide, de manera de poder definir
 una función
 
-crush :: (Generic f, ..., Monoid m) => f m -> m
+gcrush :: (Generic f, ..., Monoid m) => f m -> m
 
 -}
+
+class Crush f where
+  gcrush :: (Monoid m) => f m -> m
+
+instance Crush Id where
+  gcrush :: (Monoid m) => Id m -> m
+  gcrush (Id m) = m
+
+instance Crush (K b) where
+  gcrush :: (Monoid m) => (K b m) -> m
+  gcrush (K _) = mempty
+
+instance (Crush f, Crush g) => Crush (f :+: g) where
+  gcrush :: Monoid m => (f :+: g) m -> m
+  gcrush (Inl fm) = gcrush fm
+  gcrush (Inr gm) = gcrush gm
+
+instance (Crush f, Crush g) => Crush (f :*: g) where
+  gcrush :: Monoid m => (f :*: g) m -> m
+  gcrush (FunProd fm gm) = (gcrush fm) <> (gcrush gm)
+
+instance (Functor f, Crush f, Crush g) => Crush (f :.: g) where
+  gcrush :: Monoid m => (f :.: g) m -> m
+  gcrush (FunComp fgm) = gcrush (fmap gcrush fgm)
+
 
 --------------------------------------------------
 {- Tipos Recursivos -}
@@ -306,13 +319,26 @@ instance Generic [] where
 instance GSum [] where
   gsum = gsum . toRep
 
+instance Crush [] where
+  gcrush = gcrush . toRep
+
 {- EJERCICIO: Dar la instancia de Generic del tipo
    data Tree a = Empty | Branch (Tree a) a (Tree a)
-
 -}
 
+instance Generic Tree where
+    type Rep Tree = (K ()) :+: Tree :*: Id :*: Tree
 
-{- EJERCICIO: Extender la función crush genérica a tipos recursivos
+    toRep Empty = Inl (K ())
+    toRep (Branch l x r) = Inr (FunProd l (FunProd (Id x) r))
+
+    fromRep (Inl (K ())) = Empty
+    fromRep (Inr (FunProd l (FunProd (Id x) r))) = (Branch (l) x (r))
+
+instance Crush Tree where
+  gcrush = gcrush . toRep
+
+{- EJERCICIO: Extender la función gcrush genérica a tipos recursivos
 -}
 
 
@@ -321,6 +347,9 @@ instance GSum [] where
 -- los booleanos contenidos son True, que existe alguno True,
 -- sumando todos los números, etc.
 
+ej1 = gcrush [Any False, Any True]
+ej2 = gcrush [[1,2],[3],[4,5,6]]
+ej3 = gcrush (Branch Empty (Any False) (Branch Empty (Any False) Empty))
 
 --------------------------------------------------
 {- Probemos ahora de obtener una representación para
@@ -341,9 +370,17 @@ instance (Functor f, GSum f, GSum g) => GSum (f :.: g) where
 instance GSum GenTree where
     gsum = gsum . toRep
 
-{- Ejercicio: extender la función crush genérica a composición de funtores de
+instance Crush GenTree where
+  gcrush = gcrush . toRep
+
+{- Ejercicio: extender la función gcrush genérica a composición de funtores de
  manera de poder utilizarla sobre árboles generales.
  -}
+
+ej4 = gcrush (Gen (Any False) [(Gen (Any False) [])])
+ej5 = gcrush (Gen (Sum 4) [(Gen (Sum 5) [])])
+ej6 = gcrush (Gen (Prod 4) [(Gen (Prod 5) [])])
+
 
 {- El GHC implementa Generics (Magalhães 2010) que automatiza la derivación
    de la representación genérica.
