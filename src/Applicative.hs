@@ -111,7 +111,7 @@ Entonces podemos representar aridad 0 y aridad n+1.
 
  class Functor f => Applicative f where
     pure   :: a -> f a                 -- aridad 0
-    (<*>)  :: f (a -> b) -> f a -> f b --aridad (1+n)
+    (<*>)  :: f (a -> b) -> f a -> f b -- aridad (1+n)
 
  fmap0 f           = pure f
  fmap1 f fa        = pure f <*> fa
@@ -415,8 +415,8 @@ instance (Applicative f, Applicative g) => Applicative (f :.: g) where
   pure x = FunComp (pure (pure x))
 
   -- <*> :: (f :.: g) (a -> b) -> (f :.: g) a -> (f :.: g) (b)
+  
   FunComp fgab <*> FunComp fgx = FunComp $ (fmap (<*>) fgab) <*> fgx
-  -- h :: a -> b
   -- Version infija: FunComp fgab <*> FunComp fgx = FunComp $ (<*>) <$> fgab <*> fgx
 
 
