@@ -24,7 +24,7 @@ import Monoid
 import Functors
 import Generics
 import Applicative
-import Alternative
+import Alternative hiding (expr,term,factor)
 import Control.Applicative
 
 -------------------------------------
@@ -37,15 +37,29 @@ import Control.Applicative
 -}
 
 data Min a = Infinito | N a
-       deriving Show
+  deriving Show
+
+instance Ord a => Monoid (Min a) where
+  mempty = Infinito
+  Infinito <> ma = ma
+  ma <> Infinito = ma
+  (N a) <> (N b) = N (min a b)
 
 -- Ayuda: En la instancia requerir que el tipo a sea ordenado (Ord a)
 
 {- #2
  Definir un tipo de datos Max y definir una instancia de Monoid para el mismo
  tal que su operación binaria calcule el máximo entres sus argumentos.
-
 -}
+
+data Max a = NegInfinito | N' a
+  deriving Show
+
+instance Ord a => Monoid (Max a) where
+  mempty = NegInfinito
+  NegInfinito <> ma = ma
+  ma <> NegInfinito = ma
+  (N' a) <> (N' b) = N' (max a b)
 
 -------------------------------------
 -- Funtores
@@ -57,7 +71,12 @@ data Min a = Infinito | N a
 -}
 
 data CSList a = Vacia | Singleton a | ConsSnoc a (CSList a) a
-       deriving Show
+  deriving Show
+
+instance Functor CSList where
+  fmap f Vacia = Vacia
+  fmap f (Singleton x) = Singleton (f x)
+  fmap f (ConsSnoc x csl y) = ConsSnoc (f x) (fmap f csl) (f y)
 
 -----------------------------------------
 -- Generics
@@ -65,8 +84,18 @@ data CSList a = Vacia | Singleton a | ConsSnoc a (CSList a) a
 
 {- #4
  Dar una instancia de Generic para CSList
-
 -}
+
+instance Generic CSList where
+  type Rep CSList = (K ()) :+: Id :+: (Id :*: CSList :*: Id)
+
+  toRep Vacia = Inl (K ())
+  toRep (Singleton x) = Inr (Inl (Id x))
+  toRep (ConsSnoc x csl y) = Inr $ Inr $ FunProd (Id x) (FunProd csl (Id y))
+
+  fromRep (Inl (K ())) = Vacia
+  fromRep (Inr (Inl (Id x))) = Singleton x
+  fromRep (Inr (Inr (FunProd (Id x) (FunProd csl (Id y))))) = ConsSnoc x csl y
 
 {- #5
 Usando crush (del módulo Generics) definir una función que calcule en
@@ -89,7 +118,23 @@ Ejemplos:
  Por ejemplo:
 -}
 
+{- 
+
+Comentado para evitar conflictos con la definicion anterior
+
 instance Crush [] where
+  gcrush = gcrush . toRep
+
+-}
+
+instance (Crush f) => Crush (Rec f) where
+  gcrush (Rec t) = gcrush t
+
+instance Crush Bin where
+  gcrush = gcrush . toRep
+
+
+instance Crush CSList where
   gcrush = gcrush . toRep
 
 {-
@@ -98,10 +143,27 @@ No se especifica que hace minmax para estructuras vacías:
 LAUNCHING MISSILE! EVACUATE EARTH.
 -}
 
-minmax :: (Functor f, Generic f, Crush (Rep f), Ord a) => f a -> (a,a)
-minmax = undefined
-
 -- (Puntos extra si minmax calcula el resultado en una sola pasada)
+
+instance (Monoid a, Monoid b) => Monoid (a, b) where
+  mempty = (mempty, mempty)
+  (ma, mb) <> (ma', mb') = (ma <> ma', mb <> mb')
+
+
+getMinMax :: (Min a, Max b) -> (a,b)
+getMinMax (N x, N' y) = (x,y)
+-- En caso de querer definir la funcion minmax para functores vacios, deberia definir:
+getMinMax (Infinito, NegInfinito) = undefined
+
+minmax :: (Functor f, Generic f, Crush (Rep f), Ord a) => f a -> (a,a)
+minmax fa = (getMinMax . gcrush . toRep $ (\x -> (N x, N' x)) <$> fa)
+
+-- Ejemplos
+ej51 = minmax [2,6,3]
+
+ej52 = minmax (Node (Leaf 5) (Node (Leaf 3) (Leaf 4)))
+
+ej53 = minmax (ConsSnoc 4 (Singleton 9) 7)
 
 -----------------------------------------
 -- Applicative / Alternative
@@ -111,6 +173,13 @@ minmax = undefined
   Dado un aplicativo f y un aplicativo g, es
   (f :+: g) un aplicativo?
    Dar la instancia o argumentar por qué no lo es.
+-}
+
+{-
+instance (Applicative f, Applicative g) => Applicative (f :+: g) where
+  pure x = pure x
+  Inr f <*> Inr x = Inr (f <*> x)
+  Inl f <*> Inl x = Inr (f <*> x)
 -}
 
 {- #7
@@ -125,6 +194,19 @@ Just ((),"")
 > parse parentesis  "(()()()"
 Nothing
 -}
+
+parentesis :: AppParser p => p ()
+parentesis = parentesis' *> eof
+
+parentesis' :: AppParser p => p ()
+parentesis' = many parentesis'' *> pure ()
+
+parentesis'' :: AppParser p => p ()
+parentesis'' = (char '(') *> parentesis' <* (char ')')
+
+
+ej71 = parse parentesis "(()())()"
+ej72 = parse parentesis "(()()()"
 
 {- #8
 Evaluador de expresiones aritméticas
@@ -150,5 +232,20 @@ Just 26
 
 Recomendamos definir un parser para cada no terminal.
 
--- Puntos extra: Extender el parser para manejar resta y división.
+Puntos extra: Extender el parser para manejar resta y división.
+
 -}
+
+
+expr :: AppParser p => p Int
+expr = ((+) <$> term <* (token (char '+')) <*> expr) <|> term
+
+term :: AppParser p => p Int
+term = ((*) <$> factor <* (token (char '*')) <*> term) <|> factor
+
+factor :: AppParser p => p Int
+factor = (token (char '(')) *> expr <* (token (char ')')) <|> nat
+
+evalExpr str = fst <$> parse expr str
+
+ej81 = evalExpr "2*3+4*(1+4)"
