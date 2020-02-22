@@ -172,14 +172,19 @@ ej53 = minmax (ConsSnoc 4 (Singleton 9) 7)
 {- #6
   Dado un aplicativo f y un aplicativo g, es
   (f :+: g) un aplicativo?
-   Dar la instancia o argumentar por qué no lo es.
--}
+  Dar la instancia o argumentar por qué no lo es.
 
-{-
-instance (Applicative f, Applicative g) => Applicative (f :+: g) where
-  pure x = pure x
-  Inr f <*> Inr x = Inr (f <*> x)
-  Inl f <*> Inl x = Inr (f <*> x)
+
+  (f :+: g) no es un aplicativo, ya que:
+
+    1) Para poder definir <*> tendria que poder definir:
+      - Inr fab <*> Inr fa = Inr (fab <*> fa)
+      - Inl gab <*> Inl ga = Inl (gab <*> ga)
+      - Inr fab <*> Inl ga; que no puedo definir ya que f y g son aplicativos distintos
+      - Inl gab <*> Inl ga; idem caso anterior
+    2) Para definir pure x, deberia devolver algo del tipo (f :+: g), por lo que deberia 
+    conocer los constructores del functor f o el functor g, y elegir construir uno u otro
+
 -}
 
 {- #7
