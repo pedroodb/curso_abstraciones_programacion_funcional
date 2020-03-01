@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: f8d22bb659d7e22a4af38a3f945020619eba1eaa59b7c71fd7116c55043782dc
+-- hash: e6f1cb1591fc2c81e17badbaa2af5b5a59f15b6a4dedf965f099c3bfb092ca75
 
 name:           CursoRio2020
 version:        0.1.0.0
@@ -28,6 +28,7 @@ library
       Alternative
       Applicative
       Cola
+      Examen
       Functors
       Generics
       Heap
